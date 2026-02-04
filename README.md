@@ -6,8 +6,7 @@ erm TBA
 
 # Tools used
 - Wandb for logging
-- Jax/Flax/Optax for training
-- Pytorch for data loading
+- Pytorch for data loading, hook, training
 -  Hydra for storing various model configs
 - uv for package/env management
 

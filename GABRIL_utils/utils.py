@@ -13,9 +13,6 @@ from GABRIL_utils.frame_writer import FrameWriter
 
 from GABRIL_utils.gaze_utils import apply_gmd_dropout
 
-from einops import reduce, rearrange
-import torch.nn.functional as F
-
 MAX_EPISODES = {'Alien': 20, 'Asterix': 20, 'Assault': 20, 'Breakout': 20, 'ChopperCommand': 20,
                 'DemonAttack': 20, 'Enduro': 20, 'Frostbite': 20, 'Freeway': 20, 'MsPacman': 20,
                 'Phoenix': 20, 'Qbert': 20, 'RoadRunner': 20, 'Seaquest': 50, 'UpNDown': 20}
@@ -312,24 +309,3 @@ if __name__ == '__main__':
                                                                     stack=1, 
                                                                     num_episodes=50, 
                                                                     use_gaze=True)
-
-
-def patchify_gaze_masks(gaze_masks, patch_size=(12,12)):
-    '''
-    returns a (N x f x h_out*w_out) tensor of "attention" values mean-pooled and softmax-ed 
-    input: N x f x h x w
-    h = h_out * patch_height
-    w = w_out * patch_width
-    '''
-    patch_height = patch_size[0]
-    patch_width = patch_size[1]
-
-    gaze_masks = reduce(gaze_masks,
-        "N f (h_out ph) (w_out pw) -> N f (h_out w_out)", # note the () around h_out w_out flattens the 2d grid into 1d. why: u can only softmax over 1 dim, so a 2d grid wont work
-        "mean", 
-        ph=patch_height, 
-        pw=patch_width)
-    
-    gaze_masks = F.softmax(gaze_masks, dim=-1)
-    
-    return gaze_masks

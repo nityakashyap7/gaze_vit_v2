@@ -8,5 +8,5 @@ mlp_dim: 1536
 pool: 'cls'
 channels: 1
 dim_head: 64
-dropout: 0.
-emb_dropout: 0.
+dropout: 0.0
+emb_dropout: 0.0

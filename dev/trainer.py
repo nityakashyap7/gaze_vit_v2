@@ -19,13 +19,10 @@ class Trainer:
         self.loss_fn = instantiate(self.cfg.loss)
         self.model = instantiate(self.cfg.model)
         self.attn_extractor = instantiate(self.cfg.attention_extractor)
+        self.handle = self.model.transformer.layers[-1][0].attend.register_forward_hook(self.attn_extractor.hook_fn) # type: ignore
         self.optimizer = instantiate(self.cfg.optimizer, params=self.model.parameters())
 
-        self._register_hooks()
-
-    def _register_hooks(self):
-        self.handle = self.model.transformer.layers[-1][0].attend.register_forward_hook(self.attn_extractor.hook_fn) # type: ignore
-
+        
     def _train_step(self, batch):
         observations, action_targs, gaze_targs = batch
 

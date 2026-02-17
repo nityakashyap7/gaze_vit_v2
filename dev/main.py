@@ -3,8 +3,14 @@ from data_pipeline import DataPipeline
 from omegaconf import OmegaConf
 import torch
 
+
 def main():
-    config = OmegaConf.load('/scr/nityakas/gaze_vit_v2/config/vit_s_14_CEBeforeAvgUS.yaml') # later i shd separate trainer and dataloader configs out into separate yaml files
+    variants = {
+        'vit_s_14_CEBeforeAvgUS': 'config/vit_s_14_CEBeforeAvgUS.yaml',
+        'vit_s_14_CE': 'config/vit_s_14_CE.yaml',
+    }
+    
+    config = OmegaConf.load(variants['vit_s_14_CEBeforeAvgUS']) # later i shd separate trainer and dataloader configs out into separate yaml files
     
     torch.manual_seed(config.seed)
 

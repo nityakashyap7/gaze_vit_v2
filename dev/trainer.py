@@ -33,10 +33,12 @@ class Trainer:
 
 
     def _train_step(self, batch):
-        observations, action_targs, gaze_targs = batch
+        observations, action_targs, gaze_targs = batch # gaze_targs will just be torch zeroes if use_gaze is set to False
+
         observations = observations.to(self.device)
         action_targs = action_targs.to(self.device)
         gaze_targs = gaze_targs.to(self.device)
+
 
         # forward pass
         self.optimizer.zero_grad()
@@ -46,7 +48,7 @@ class Trainer:
         gaze_preds = self.attn_extractor.cls_qkt_logits
         
         # calculate loss w regularization
-        loss = self.loss_fn(action_preds, action_targs, gaze_preds, gaze_targs)
+        loss = self.loss_fn(action_preds=action_preds, action_targs=action_targs, gaze_preds=gaze_preds, gaze_targs=gaze_targs)
         
         # backward pass
         loss.backward()
@@ -58,7 +60,7 @@ class Trainer:
 
 
     def train(self):
-        for epoch in range(self.cfg.training.num_epochs):
+        for epoch in range(self.cfg.trainer.training.num_epochs):
             loss_dict = {}
             
             for batch in self.train_loader:
@@ -69,3 +71,6 @@ class Trainer:
             self.logger.log_scalar_dict(loss_dict, step=epoch) # log last timestep in the epoch
             
             print(f"Epoch {epoch} done!")
+
+    def evaluate(self):
+        pass

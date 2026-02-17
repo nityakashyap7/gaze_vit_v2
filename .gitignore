@@ -2,4 +2,6 @@
 __pycache__/
 dataset
 patched_dataset/
+__MACOSX/
+wandb/
 .vscode/

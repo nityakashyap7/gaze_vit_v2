@@ -1,5 +1,6 @@
 import wandb
 from typing import Any
+from omegaconf import OmegaConf
 
 class Logger:
     def __init__(self,
@@ -13,7 +14,7 @@ class Logger:
 
         self.run = wandb.init(
             project='gaze-vit-v2',
-            config=cfg,
+            config=OmegaConf.to_container(cfg, resolve=True),  # Convert to dict # type: ignore
             name=run_name,
             group=run_group,
             tags=['dev'] 

@@ -1,0 +1,67 @@
+seed: 42
+patch_size: 14
+lr: 0.01
+loss_filename: ce
+loss_name: CE
+
+trainer:
+  loss:
+    _target_: losses.${loss_filename}.${loss_name}
+    reg_lambda: 1.0
+
+  model:
+    _target_: vit_pytorch.ViT
+    image_size: 84
+    patch_size: ${patch_size}
+    num_classes: 18
+    dim: 384
+    depth: 12
+    heads: 6
+    mlp_dim: 1536
+    pool: cls
+    channels: 1
+    dim_head: 64
+    dropout: 0.0
+    emb_dropout: 0.0
+
+  optimizer:
+    _target_: torch.optim.AdamW
+    _partial_: true
+    lr: ${lr}
+    weight_decay: 0.01
+
+  training:
+    num_epochs: 5
+
+
+
+data_pipeline:
+  dataloader: 
+    batch_size: 64
+    num_workers: 4
+
+  train_test_split: 
+    test_size: 0.2
+    random_state: ${seed}
+    
+  
+  preprocess_gaze:
+    _target_: utils.patch_gaze_masks.do_nothing
+    _partial_: true
+    patch_size: ["${patch_size}", "${patch_size}"]
+
+
+  load_dataset:
+    _target_: GABRIL_utils.utils.load_dataset
+    env: Seaquest
+    seed: ${seed}
+    datapath: 'dataset/'
+    conf_type: normal
+    conf_randomness: 0.0
+    stack: 1
+    num_episodes: 2
+    use_gaze: False
+    data_source: Our
+    gaze_mask_sigma: 15.0
+    gaze_mask_coef: 0.7
+

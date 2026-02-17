@@ -9,18 +9,16 @@ class CEBeforeAvgDS:
 
     def _preprocess_gaze_preds_and_targs(self, gaze_preds, gaze_targs):
         '''
-        :param gaze_preds: attn logits (not softmaxed), shape: (b h l, l)
+        :param gaze_preds: non-softmaxed attn logits, shape: (b h p) 
         :param gaze_targs: shape: (b, p)
-
-        where p = number of patches, l = sqrt(p)
+        where b = batch_size, h = number of heads, p = number of patches
 
         output: both should be shape: (b h p)
         '''
-        # gaze_preds needs to be softmaxed, hook only returns logits
-        gaze_preds = rearrange(gaze_preds, 'b h l l -> b h (l l)') # (b, h, p)
-        gaze_preds = F.softmax(gaze_preds, dim=-1) 
+        
+        # hook returns logits but cross entropy wants that (it internally does its own softmax)
 
-        h = gaze_preds.shape[1] # (b, h, p) where b = batch_size, h = number of heads, p = number of patches
+        b, h, p = gaze_preds.shape # (b, h, p) where b = batch_size, h = number of heads, p = number of patches
         
         gaze_targs = repeat(gaze_targs, 'b p -> b h p', h=h)
 

@@ -6,7 +6,7 @@ loss_name: CEBeforeAvgUS
 
 trainer:
   loss:
-    _target_: losses.${loss_filename}.$(loss_name)
+    _target_: losses.${loss_filename}.${loss_name}
     reg_lambda: 1.0
 
   model:

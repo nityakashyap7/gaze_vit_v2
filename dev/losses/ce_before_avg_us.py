@@ -27,8 +27,7 @@ class CEBeforeAvgUS:
         # broadcast across heads
         gaze_targs = repeat(gaze_targs, 'b H W -> b h H W', h=h) 
 
-        # gaze_preds needs to be softmaxed, hook only returns logits
-        gaze_preds = F.softmax(gaze_preds, dim=-1) 
+        # hook returns logits but cross entropy wants that (it internally does its own softmax)
 
         # upsample
         gaze_preds = repeat(gaze_preds, 'b h p -> b h (p patch_square)', patch_square=patch_size_squared) # p * patch_size_squared = H*W (alias as "N")

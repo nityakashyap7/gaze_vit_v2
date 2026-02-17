@@ -1,0 +1,10 @@
+{
+  "assistant.name": "GitHub Copilot",
+  "preference": {
+    "suggestions_trigger": "never",
+    "verbosity": "minimal"
+  },
+  "scope": "session",
+  "created_by": "GitHub Copilot",
+  "created_at": "2026-02-16"
+}

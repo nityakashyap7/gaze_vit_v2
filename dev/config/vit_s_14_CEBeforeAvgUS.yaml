@@ -33,29 +33,29 @@ trainer:
   training:
     num_epochs: 5
 
-
+  evlaluation:
+    num_eval_episodes: 5
+    eval_interval: 1
 
 data_pipeline:
-  dataloader: 
+  dataloader:
     batch_size: 64
     num_workers: 4
 
-  train_test_split: 
+  train_test_split:
     test_size: 0.2
     random_state: ${seed}
-    
-  
+
   preprocess_gaze:
     _target_: utils.patch_gaze_masks.normalize_gaze_masks
     _partial_: true
     patch_size: ["${patch_size}", "${patch_size}"]
 
-
   load_dataset:
     _target_: GABRIL_utils.utils.load_dataset
     env: Seaquest
     seed: ${seed}
-    datapath: 'dataset/'
+    datapath: "dataset/"
     conf_type: normal
     conf_randomness: 0.0
     stack: 1
@@ -64,4 +64,3 @@ data_pipeline:
     data_source: Our
     gaze_mask_sigma: 15.0
     gaze_mask_coef: 0.7
-

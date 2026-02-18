@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"name": "gaze_vit_v2",
+			"path": ".."
+		},
+		{
+			"name": "dataset",
+			"path": "../../../../Downloads/dataset"
+		}
+	],
+	"settings": {}
+}

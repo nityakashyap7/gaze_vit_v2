@@ -20,7 +20,7 @@ class CEAfterAvgUS:
         output both in shape: (b (H W))
         '''
 
-        b, h, p = gaze_preds.shape
+        '''b, h, p = gaze_preds.shape
         b, H, W = gaze_targs.shape
         patch_size_squared = (sqrt(N)/l)^2
         
@@ -35,7 +35,19 @@ class CEAfterAvgUS:
         # upsample
         gaze_preds = repeat(gaze_preds, 'b p -> b (p patch_square)', patch_square=patch_size_squared) # p * patch_size_squared = N
 
-        return gaze_preds, gaze_targs
+        return gaze_preds, gaze_targs'''
+        b, h, p = gaze_preds.shape # p is the scle factor nvm gng
+        b, H, W = gaze_targs.shape
+
+        gaze_preds = reduce(gaze_preds, 'b h p -> b p', reduction='mean')
+        gaze_preds.unsqueeze_(1) # (b, 1, p)
+
+        gaze_preds = F.upsample(gaze_preds, size=(H*W), mode='nearest')
+        gaze_preds = gaze_preds.squeeze(1) # (b, H*W)
+
+        return gaze_preds, gaze_targs.flatten(1)
+        
+
 
 
     def __call__(self, action_preds, action_targs, gaze_preds, gaze_targs, **kwargs):

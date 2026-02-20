@@ -33,6 +33,11 @@ trainer:
   training:
     num_epochs: 5
 
+  evlaluation:
+    num_eval_episodes: 5
+    eval_interval: 1
+
+
 
 
 data_pipeline:

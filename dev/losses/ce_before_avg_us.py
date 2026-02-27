@@ -15,11 +15,10 @@ class CEBeforeAvgUS(CEPlusGazeReg):
         :param gaze_targs: shape: (b, H, W)
         where b = batch_size, h = number of heads, p = number of patches, H, W = og input image height and width 
 
-        output both in shape: ((b h) (H W)) or ((b h) N) where N = H*W
+        output both in shape: ((b h) (H W))
         '''
         b, h, p = gaze_preds.shape
         b, H, W = gaze_targs.shape # H = W = 84
-        patch_square = int(H*W/p)
         
 
         # broadcast across heads
@@ -27,12 +26,17 @@ class CEBeforeAvgUS(CEPlusGazeReg):
 
         # hook returns logits but cross entropy wants that (it internally does its own softmax)
 
+        
+        # collapse the batch_size and num_heads dim into one that cross_entropy will average over to return u a scalar (this averages across the batch and heads so u dont need to do 2 separate averages)
+        gaze_preds = rearrange(gaze_preds, 'b h p -> (b h) p') # do this before upsampling bc interpolate is strict abt dims (needs exactly 3 for mode = bilinear)
+        gaze_targs = rearrange(gaze_targs, 'b h H W -> (b h) (H W)') # lets do that for targs here as well so i dont forget
+
+
         # upsample
-        gaze_preds = repeat(gaze_preds, 'b h p -> b h (p patch_square)', patch_square=patch_square) # p * patch_size_squared = H*W (alias as "N")
+        p1 = p2 = int(sqrt(p))
+        gaze_preds = rearrange(gaze_preds, 'bh p -> bh 1 p1 p2', p1=p1, p2=p2) # interpolate expects a channel dim and a 2D grid
+        gaze_preds = F.interpolate(gaze_preds, size=(H, W), align_corners=False, mode='bilinear')
 
-
-        #  collapse the batch_size and num_heads dim into one that cross_entropy will average over to return u a scalar (this averages across the batch and heads so u dont need to do 2 separate averages)
-        gaze_preds = rearrange(gaze_preds, 'b h N -> (b h) N') 
-        gaze_targs = rearrange(gaze_targs, 'b h H W -> (b h) (H W)')
+        gaze_targs = rearrange(gaze_targs, 'bh, H, W -> bh (H W)')
 
         return gaze_preds, gaze_targs

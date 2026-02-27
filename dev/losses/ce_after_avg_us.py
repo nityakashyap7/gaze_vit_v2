@@ -20,7 +20,7 @@ class CEAfterAvgUS(CEPlusGazeReg):
 
         b, h, p = gaze_preds.shape
         b, H, W = gaze_targs.shape
-        patch_square = int(H*W/p)
+        
         
         # hook returns logits but cross entropy wants that (it internally does its own softmax)
 
@@ -28,7 +28,6 @@ class CEAfterAvgUS(CEPlusGazeReg):
         gaze_preds = reduce(gaze_preds, 'b h p -> b p', reduction='mean')
 
         # upsample
-        # gaze_preds = repeat(gaze_preds, 'b p -> b (p patch_square)', patch_square=patch_square) # p*patch_square = H*W
         p1 = p2 = int(sqrt(p))
         gaze_preds = rearrange(gaze_preds, 'b p -> b 1 p1 p2', p1=p1, p2=p2) # interpolate expects a channel dim and a 2D grid
         gaze_preds = F.interpolate(gaze_preds, size=(H, W), align_corners=False, mode='bilinear')

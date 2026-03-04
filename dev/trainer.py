@@ -1,6 +1,6 @@
 import torch
 from utils.hook import AttentionExtractor
-from utils.patch_gaze_masks import patch_gaze_masks
+import utils.patch_gaze_masks
 import torch.nn.functional as F
 import losses
 import hydra
@@ -11,6 +11,7 @@ from utils.hook import AttentionExtractor
 import numpy as np
 from utils.logger import Logger
 from utils.hook import AttentionExtractor
+from itertools import islice
 
 class Trainer:
     def __init__(self, config, train_loader, val_loader):
@@ -26,6 +27,7 @@ class Trainer:
         self.attn_extractor = AttentionExtractor()
         self.handle = self.model.transformer.layers[-1][0].attend.register_forward_hook(self.attn_extractor.hook_fn) # type: ignore
         self.optimizer = instantiate(self.cfg.trainer.optimizer)(params=self.model.parameters())
+        self.scheduler = instantiate(self.cfg.trainer.scheduler)(optimizer=self.optimizer) 
         self.logger = Logger(self.cfg)
         
         self.train_loader = train_loader
@@ -38,7 +40,6 @@ class Trainer:
         observations = observations.to(self.device)
         action_targs = action_targs.to(self.device)
         gaze_targs = gaze_targs.to(self.device)
-
 
         # forward pass
         self.optimizer.zero_grad()
@@ -56,21 +57,47 @@ class Trainer:
         # update model weights in opposite direction of gradient
         self.optimizer.step()
         
-        return {'train_loss' : loss.item()} # so train() can log it
+        # return {'train_loss' : loss.item()} # so train() can log it
 
 
     def train(self):
         for epoch in range(self.cfg.trainer.training.num_epochs):
-            loss_dict = {}
+            # loss_dict = {}
             
+            # for batch in self.train_loader:
+            #     loss_dict['train'] = self._train_step(batch)
+
             for batch in self.train_loader:
-                loss_dict = self._train_step(batch)
+                self._train_step(batch)
 
-            # TODO: run validation and add val_loss to loss_dict
-
-            self.logger.log_scalar_dict(loss_dict, step=epoch) # log last timestep in the epoch
+            # self.logger.log_scalar_dict(loss_dict, step=epoch) # log last timestep in the epoch
+            self.logger.log_scalar_dict(self.estimate_loss(), epoch=epoch)
             
+            # change lr (cosine annealing) each epoch 
+            self.scheduler.step()
             print(f"Epoch {epoch} done!")
+        
 
+    @torch.no_grad()
+    def estimate_loss(self):
+        """evaluating current model on training and validation sets. spits out avg loss for both in a dictionary w 2 keys"""
+        metrics = {}
+        val_iters = len(self.val_loader)
+        self.model.eval()
+        losses = torch.zeros(val_iters)  # use this instead of list so u can call losses.mean() instead of sum(losses)/len(losses) for a list
+
+        splits = {"train": self.train_loader, "val": self.val_loader}
+    
+        metrics = {}
+        for split, loader in splits.items():
+            for i, batch in enumerate(islice(loader, val_iters)):
+                logits, loss = self.model(batch)
+                losses[i] = loss.item()
+            metrics[split] = losses.mean()
+
+        self.model.train()  # reset to training mode
+        return metrics
+
+    @torch.no_grad()
     def evaluate(self):
         pass

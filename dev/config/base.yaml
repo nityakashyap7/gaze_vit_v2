@@ -6,14 +6,19 @@ defaults:
 
 seed: 42
 patch_size: 14
-lr: 0.01
 
 trainer:
   optimizer:
     _target_: torch.optim.AdamW
     _partial_: true
-    lr: ${lr}
+    lr: 0.01
     weight_decay: 0.01
+
+  scheduler:
+    _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+    _partial_: true
+    T_max: ${trainer.training.num_epochs}
+    eta_min: 1.0e-6
 
   training:
     num_epochs: 5

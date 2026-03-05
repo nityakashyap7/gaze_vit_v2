@@ -1,0 +1,21 @@
+ViT (1 frame only):
+- Seaquest
+- Enduro
+- Freeway
+- Asterix
+- DemonAttack
+- RoadRunner
+
+ViViT:
+- MsPacman: 4
+- UpNDown: 2
+- Amidar: 4
+- Breakout: 4
+- BankHeist: 4
+- Alien: 4
+- Hero: 4
+- Frostbite: 4
+- Assault: 2
+- ChopperCommand: 2
+- Qbert: 4
+- Phoenix: 2

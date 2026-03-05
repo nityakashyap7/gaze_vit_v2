@@ -20,9 +20,6 @@ class Logger:
             group=run_group,
             tags=['dev'] 
         )
-    
-    def log_scalar_dict(self, scalar_dict:dict, epoch:int) -> None:
-        self.run.log(scalar_dict, epoch)
 
     
 

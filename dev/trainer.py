@@ -4,25 +4,26 @@ import utils.patch_gaze_masks
 import torch.nn.functional as F
 import losses
 import hydra
+from hydra.core.hydra_config import HydraConfig
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 from vit_pytorch import ViT
-from utils.hook import AttentionExtractor
 import numpy as np
 from utils.logger import Logger
-from utils.hook import AttentionExtractor
 from itertools import islice
 import wandb
 import gymnasium as gym
 import ale_py
 from GABRIL_utils import atari_env_manager
+import os
 
 
 class Trainer:
     def __init__(self, config, train_loader, val_loader):
         self.cfg = config
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') # not in yaml bc its not gna change
-
+        os.makedirs("checkpoint_weights", exist_ok=True) # torch.save() wont create directories for u
+        
         self._construct_components(train_loader, val_loader)
         
 
@@ -66,18 +67,53 @@ class Trainer:
 
 
     def train(self):
+        best_val_loss = float('inf') # for early stopping (loss starts high and is supposed to decrease as the model gets smarter)
+        best_epoch = -1
+        patience_count = 0
+        model_name = HydraConfig.get().runtime.choices['model']  # eg "vit_s_14"
+        path = f'checkpoint_weights/{model_name}_best.pt'
+
         for epoch in range(self.cfg.trainer.training.num_epochs):
 
             for batch in self.train_loader:
                 self._train_step(batch)
 
+            val_loss = self.eval_validation_set(epoch=epoch)
 
-            self.eval_validation_set(epoch=epoch)
-            
+            # stop early?
+            if val_loss < best_val_loss:
+                # save the model's weights
+                torch.save(self.model.state_dict(), path)
+                artifact = wandb.Artifact(name=f'{model_name}_best', type='model')
+                artifact.add_file(path) # this is an upload function, so it has to already exist on ur local machine
+                wandb.log_artifact(artifact)
+
+                # reset patience counter
+                patience_count = 0
+                
+                # new record yay!! 
+                best_val_loss = val_loss
+
+                # update which epoch gave the best results
+                best_epoch = epoch
+
+            else:
+                patience_count += 1
+
+                if patience_count >= self.cfg.trainer.training.patience:
+                    print(f"Stopping training early: {epoch} epochs completed. Weights will be rolled back to epoch {best_epoch}.")
+                    break
+
             # change lr (cosine annealing) each epoch 
             self.scheduler.step()
+
+            
             print(f"Epoch {epoch} done!")
         
+        # log which epoch gave the best validation loss
+        wandb.log({'best epoch': best_epoch})
+
+        self.model.load_state_dict(torch.load(path, weights_only=True)) # roll back weights for eval in env 
         self.eval_in_env()
         
 
@@ -86,8 +122,9 @@ class Trainer:
         """evaluating current model on training and validation sets. spits out avg loss for both in a dictionary w 2 keys"""
 
         val_iters = len(self.val_loader)
-        splits = {"train": self.train_loader, "val": self.val_loader}
+        splits = {'train': self.train_loader, 'val': self.val_loader}
         class_names = self.env.unwrapped.get_action_meanings() # type: ignore
+        val_loss = 0
 
         self.model.eval()
 
@@ -115,7 +152,12 @@ class Trainer:
                 all_action_preds.append(action_preds)
                 all_action_targs.append(action_targs)
 
-            wandb.log({f'{split}_avg_loss': losses.mean()})
+            avg_loss = losses.mean()
+
+            if split == 'val':
+                val_loss = avg_loss
+
+            wandb.log({f'{split}_avg_loss': avg_loss}, step=epoch) # wandb auto-increments its internal step counter each time you call wandb.log(), so the metrics might end up on different x-axis steps. pass an explicit step=epoch to keep them aligned.
 
             # log action preds and targs for wandb confusion matrix (for both training and validation set data)
             action_preds = torch.cat(all_action_preds)  # still on GPU
@@ -125,10 +167,12 @@ class Trainer:
                 y_true=action_targs.cpu().numpy().tolist(),
                 preds=action_preds.cpu().numpy().tolist(),
                 class_names=class_names
-            )})
+            )}, step=epoch)
 
 
         self.model.train()  # reset to training mode
+
+        return val_loss
     
 
     @torch.no_grad()

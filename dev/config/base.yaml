@@ -23,6 +23,7 @@ trainer:
 
   training:
     num_epochs: 5
+    patience: 2
 
 data_pipeline:
   dataloader:

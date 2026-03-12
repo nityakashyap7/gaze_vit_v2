@@ -15,6 +15,7 @@ from itertools import islice
 import wandb
 import gymnasium as gym
 import ale_py
+from GABRIL_utils import atari_env_manager
 
 
 class Trainer:
@@ -33,7 +34,8 @@ class Trainer:
         self.optimizer = instantiate(self.cfg.trainer.optimizer)(params=self.model.parameters())
         self.scheduler = instantiate(self.cfg.trainer.scheduler)(optimizer=self.optimizer) 
         self.logger = Logger(self.cfg)
-        self.env = gym.make(f'ALE/{self.cfg.data_pipeline.load_dataset.env}-v5')
+        self.env = atari_env_manager.create_env(self.cfg.create_env)
+        
         
         self.train_loader = train_loader
         self.val_loader = val_loader
@@ -131,5 +133,54 @@ class Trainer:
 
     @torch.no_grad()
     def eval_in_env(self):
-        # TODO: add code to play a few episodes in the env
+        self.model.eval()
+        num_episodes = self.cfg.data_pipeline.load_dataset.num_episodes
+
+        scores = []
+        for episode in range(num_episodes):
+
+            done = False
+            episode_reward = 0
+            step = 0
+
+            stacked_obs, info = self.env.reset(seed=self.cfg.seed + 1000 * episode)
+
+            while not done:
+
+                stacked_obs = np.asarray(stacked_obs, dtype=np.uint8)
+
+                _ = self.env.get_wrapper_attr('render_')(gaze=None, record_frame=episode < 2)
+
+                stacked_obs = torch.as_tensor(stacked_obs, device=self.device, dtype=torch.float32).unsqueeze(0) / 255.0
+                action = self.model(stacked_obs).argmax(1)[0].cpu().item()
+
+                stacked_obs, reward, terminated, truncated, info = self.env.step(action)
+                done = terminated or truncated
+
+
+                episode_reward += float(reward)
+                step += 1
+
+                if step > 5000:
+                    done = True
+
+            scores.append(episode_reward)
+            print(f"Episode {episode} reward: {episode_reward} (mean: {np.mean(scores):.1f}, std: {np.std(scores):.1f}), steps: {step}")
+
+        mean_score, std_score = np.mean(scores), np.std(scores)
+
+        wandb.log({
+            'eval/mean_score': mean_score,
+            'eval/std_score': std_score,
+            'eval/min_score': np.min(scores),
+            'eval/max_score': np.max(scores),
+        })
+
+        video_path = f'vids/{self.cfg.env_name}_eval.mp4'
+        self.env.get_wrapper_attr('save_video')(video_path)
+        wandb.log({'eval/video': wandb.Video(video_path, fps=15, format='mp4')})
+
+        self.model.train()
         self.env.close()
+
+        return mean_score, std_score

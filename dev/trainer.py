@@ -6,7 +6,7 @@ import losses
 import hydra
 from hydra.core.hydra_config import HydraConfig
 from hydra.utils import instantiate
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 from vit_pytorch import ViT
 import numpy as np
 from utils.logger import Logger
@@ -25,6 +25,8 @@ class Trainer:
         os.makedirs("checkpoint_weights", exist_ok=True) # torch.save() wont create directories for u
         
         self._construct_components(train_loader, val_loader)
+
+        self.wandb_logging_init()
         
 
     def _construct_components(self, train_loader, val_loader):
@@ -34,13 +36,26 @@ class Trainer:
         self.handle = self.model.transformer.layers[-1][0].attend.register_forward_hook(self.attn_extractor.hook_fn) # type: ignore
         self.optimizer = instantiate(self.cfg.trainer.optimizer)(params=self.model.parameters())
         self.scheduler = instantiate(self.cfg.trainer.scheduler)(optimizer=self.optimizer) 
-        self.logger = Logger(self.cfg)
         self.env = atari_env_manager.create_env(self.cfg.create_env)
         
         
         self.train_loader = train_loader
         self.val_loader = val_loader
 
+    def wandb_logging_init(self):
+        env = self.cfg.data_pipeline.load_dataset.env # type: ignore
+        loss_type = HydraConfig.get().runtime.choices.get('loss', 'unknown') # unknown is just a fallback value for the .get() dict lookup. If for some reason "loss" isn't found in Hydra's runtime choices (e.g., someone runs the script without specifying a loss group)
+
+        run_group = env 
+        run_name = f'{env}_{loss_type}'
+
+        self.run = wandb.init(
+            project='gaze-vit-v2',
+            config=OmegaConf.to_container(self.cfg, resolve=True),  # Convert to dict # type: ignore
+            name=run_name,
+            group=run_group,
+            tags=['debug'] 
+        )
 
     def _train_step(self, batch):
         observations, action_targs, gaze_targs = batch # gaze_targs will just be torch zeroes if use_gaze is set to False

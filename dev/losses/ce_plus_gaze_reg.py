@@ -9,9 +9,13 @@ class CEPlusGazeReg:
         
 
 
+    def _preprocess_gaze_preds_and_targs(self, gaze_preds, gaze_targs):
+        return gaze_preds, gaze_targs
+
     def __call__(self, action_preds, action_targs, gaze_preds, gaze_targs, **kwargs):
         ce = F.cross_entropy(action_preds, action_targs)
 
+        gaze_preds, gaze_targs = self._preprocess_gaze_preds_and_targs(gaze_preds, gaze_targs)
         reg = self.reg_lambda * self.reg_loss_fn(gaze_preds, gaze_targs)
 
         return ce + reg
@@ -48,7 +52,7 @@ class CEBeforeAvgUS(CEPlusGazeReg):
 
         # upsample
         p1 = p2 = int(sqrt(p))
-        gaze_preds = rearrange(gaze_preds, 'bh p -> bh 1 p1 p2', p1=p1, p2=p2) # interpolate expects a channel dim and a 2D grid
+        gaze_preds = rearrange(gaze_preds, 'bh (p1 p2) -> bh 1 p1 p2', p1=p1, p2=p2) # interpolate expects a channel dim and a 2D grid
         gaze_preds = F.interpolate(gaze_preds, size=(H, W), align_corners=False, mode='bilinear')
 
         gaze_targs = rearrange(gaze_targs, 'bh, H, W -> bh (H W)')
@@ -82,7 +86,7 @@ class CEAfterAvgUS(CEPlusGazeReg):
 
         # upsample
         p1 = p2 = int(sqrt(p))
-        gaze_preds = rearrange(gaze_preds, 'b p -> b 1 p1 p2', p1=p1, p2=p2) # interpolate expects a channel dim and a 2D grid
+        gaze_preds = rearrange(gaze_preds, 'b (p1 p2) -> b 1 p1 p2', p1=p1, p2=p2) # interpolate expects a channel dim and a 2D grid
         gaze_preds = F.interpolate(gaze_preds, size=(H, W), align_corners=False, mode='bilinear')
 
         gaze_targs = rearrange(gaze_targs, 'b, H, W -> b (H W)')

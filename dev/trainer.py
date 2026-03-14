@@ -36,7 +36,7 @@ class Trainer:
         self.handle = self.model.transformer.layers[-1][0].attend.register_forward_hook(self.attn_extractor.hook_fn) # type: ignore
         self.optimizer = instantiate(self.cfg.trainer.optimizer)(params=self.model.parameters())
         self.scheduler = instantiate(self.cfg.trainer.scheduler)(optimizer=self.optimizer) 
-        self.env = atari_env_manager.create_env(self.cfg.create_env)
+        self.env = atari_env_manager.create_env(**self.cfg.create_env)
         
         
         self.train_loader = train_loader
@@ -60,16 +60,16 @@ class Trainer:
     def _train_step(self, batch):
         observations, action_targs, gaze_targs = batch # gaze_targs will just be torch zeroes if use_gaze is set to False
 
-        observations = observations.to(self.device)
-        action_targs = action_targs.to(self.device)
-        gaze_targs = gaze_targs.to(self.device)
+        observations = observations.to(self.device) # [batch_size, num_channels, H, W]: [64, 1, 84, 84]
+        action_targs = action_targs.to(self.device) # [batch_size]: [64]
+        gaze_targs = gaze_targs.to(self.device) # [batch_size, H, W]: [64, 84, 84]
 
         # forward pass
         self.optimizer.zero_grad()
-        action_preds = self.model(observations)
+        action_preds = self.model(observations) # [batch_size, len(action_space)]: [64, 18]
 
         # extract out attention weights
-        gaze_preds = self.attn_extractor.cls_qkt_logits
+        gaze_preds = self.attn_extractor.cls_qkt_logits # [batch_size, num_heads, num_patches]: [64, 6, 36]
         
         # calculate loss w regularization
         loss = self.loss_fn(action_preds=action_preds, action_targs=action_targs, gaze_preds=gaze_preds, gaze_targs=gaze_targs)

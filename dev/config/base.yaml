@@ -22,8 +22,8 @@ trainer:
     eta_min: 1.0e-6
 
   training:
-    num_epochs: 5
-    patience: 2
+    num_epochs: 10
+    patience: 10
 
 data_pipeline:
   dataloader:

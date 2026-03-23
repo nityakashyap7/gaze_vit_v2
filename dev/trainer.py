@@ -2,7 +2,7 @@ import torch
 from utils.hook import AttentionExtractor
 import utils.patch_gaze_masks
 import torch.nn.functional as F
-import reg
+import losses
 import hydra
 from hydra.core.hydra_config import HydraConfig
 from hydra.utils import instantiate
@@ -183,12 +183,20 @@ class Trainer:
             action_targs = torch.cat(all_action_targs)
 
             cm = confusion_matrix(action_targs.cpu().numpy(), action_preds.cpu().numpy())
-            fig, ax = plt.subplots(figsize=(8, 6))
-            sns.heatmap(cm, annot=True, fmt='d', ax=ax,
-                        xticklabels=class_names, yticklabels=class_names)
-            ax.set_xlabel('Predicted')
-            ax.set_ylabel('Actual')
-            ax.set_title(f'Epoch {epoch}')
+            fig, ax = plt.subplots(figsize=(5, 5))
+            im = ax.imshow(cm, interpolation="nearest", cmap="Blues")
+            fig.colorbar(im)
+            ticks = np.arange(len(class_names))
+            ax.set(
+                xticks=ticks, yticks=ticks,
+                xticklabels=class_names, yticklabels=class_names,
+                xlabel="Predicted", ylabel="True",
+                title=f"{split} set confusion matrix (epoch {epoch})",
+            )
+            for i in range(cm.shape[0]):
+                for j in range(cm.shape[1]):
+                    ax.text(j, i, str(cm[i, j]), ha="center", va="center", color="black")
+            fig.tight_layout()
             wandb.log({f'{split}/confusion_matrix': wandb.Image(fig)}, step=epoch)
             plt.close(fig)
 
@@ -202,7 +210,7 @@ class Trainer:
     def eval_in_env(self):
 
         self.model.eval()
-        num_episodes = self.cfg.data_pipeline.load_dataset.num_episodes
+        num_episodes = self.cfg.trainer.eval_in_env.num_episodes
         record_eps = self.cfg.trainer.eval_in_env.record_eps
         frame_skip = self.cfg.trainer.eval_in_env.frame_skip
         wandb_playback_fps = self.cfg.trainer.eval_in_env.wandb_playback_fps

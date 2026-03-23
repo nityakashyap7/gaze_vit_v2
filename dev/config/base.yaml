@@ -23,11 +23,12 @@ trainer:
 
   training:
     num_epochs: 1
-    patience: 10
+    patience: 100
 
   eval_in_env:
+    num_episodes: 2
     record_eps: 2
-    frame_skip: 4
+    frame_skip: 3
     wandb_playback_fps: 15
 
 data_pipeline:

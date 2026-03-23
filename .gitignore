@@ -4,4 +4,11 @@ dataset
 patched_dataset/
 __MACOSX/
 wandb/
+<<<<<<< Updated upstream
 .vscode/
+=======
+.vscode/
+*.sbatch
+outputs/
+.DS_Store
+>>>>>>> Stashed changes

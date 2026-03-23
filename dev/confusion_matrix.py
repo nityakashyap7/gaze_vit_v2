@@ -5,13 +5,10 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 confusion_matrices = []
-size = [0,0]
 
 def append_confusion_matrix(predictions, targets, epoch):
 
     matrix = sklearn.metrics.confusion_matrix(targets, predictions)
-    size[0] = matrix.shape[0]
-    size[1] = matrix.shape[1]
     plt.clf()
     img = sns.heatmap(matrix, annot=True, fmt='d', cmap='Blues')
     img.set_title('Confusion Matrix')
@@ -30,7 +27,10 @@ def append_confusion_matrix(predictions, targets, epoch):
 #append_confusion_matrix(predictions, targets, 1)
 
 def create_video(fps=2):
-    writer = cv2.VideoWriter('confusion_matrices.mp4', cv2.VideoWriter_fourcc(*'mp4v'), fps, (640, 480))
+    if not confusion_matrices:
+        return
+    h, w = confusion_matrices[0].shape[:2]
+    writer = cv2.VideoWriter('confusion_matrices.mp4', cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
     # make it from rgb to bgr
     for matrix in confusion_matrices:
         switched_matrix = cv2.cvtColor(matrix, cv2.COLOR_RGB2BGR)

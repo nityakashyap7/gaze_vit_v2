@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 confusion_matrices = []
 
-def append_confusion_matrix(predictions, targets, epoch):
+def append_confusion_matrix(predictions, targets, epoch, class_names):
 
     matrix = sklearn.metrics.confusion_matrix(targets, predictions)
     plt.clf()

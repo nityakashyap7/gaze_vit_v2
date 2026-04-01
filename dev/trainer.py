@@ -34,9 +34,13 @@ class Trainer:
 
     def _construct_components(self, train_loader, val_loader):
         self.loss_fn = instantiate(self.cfg.trainer.loss)
+
         self.model = instantiate(self.cfg.trainer.model).to(self.device)
         self.attn_extractor = AttentionExtractor()
-        self.handle = self.model.transformer.layers[-1][0].attend.register_forward_hook(self.attn_extractor.hook_fn) # type: ignore
+        spatial_transformer_last_layer = self.model.spatial_transformer.layers[-1][0].attend
+        self.handle = spatial_transformer_last_layer.register_forward_hook(self.attn_extractor.hook_fn) # type: ignore
+        spatial_transformer_last_layer.use_flash_attn = False # disable flash attention for the same layer(s) ur extracting weights from 
+        
         self.optimizer = instantiate(self.cfg.trainer.optimizer)(params=self.model.parameters())
         self.scheduler = instantiate(self.cfg.trainer.scheduler)(optimizer=self.optimizer) 
         self.env = atari_env_manager.create_env(**self.cfg.create_env)
@@ -48,7 +52,7 @@ class Trainer:
     def wandb_logging_init(self):
         env = self.cfg.data_pipeline.load_dataset.env # type: ignore
         reg_type = HydraConfig.get().runtime.choices.get('loss', 'unknown') # unknown is just a fallback value for the .get() dict lookup. If for some reason "loss" isn't found in Hydra's runtime choices (e.g., someone runs the script without specifying a loss group)
-        reg_loss_fn = HydraConfig.get().runtime.choices.get('reg_loss_fn', 'unknown')
+        reg_loss_fn = HydraConfig.get().runtime.choices.get('reg_loss_fn') or ''
         
         run_group = env 
         run_name = f'{env}_{reg_loss_fn}_{reg_type}'
@@ -134,6 +138,8 @@ class Trainer:
 
         self.model.load_state_dict(torch.load(path, weights_only=True)) # roll back weights for eval in env 
         self.eval_in_env()
+
+        wandb.finish()
         
 
     @torch.no_grad()

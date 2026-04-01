@@ -1,0 +1,14 @@
+trainer:
+  model:
+    _target_: vit_pytorch.ViViT
+    dim: 384
+    spatial_depth: 4
+    temporal_depth: 2
+    heads: 8
+    mlp_dim: 1536
+    image_size: 84
+    image_patch_size: ${patch_size}
+    frames: 4
+    frame_patch_size: 2
+    num_classes: 18
+    variant: factorized_encoder

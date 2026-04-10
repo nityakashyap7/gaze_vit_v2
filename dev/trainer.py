@@ -36,10 +36,7 @@ class Trainer:
         self.loss_fn = instantiate(self.cfg.trainer.loss)
 
         self.model = instantiate(self.cfg.trainer.model).to(self.device)
-        self.attn_extractor = AttentionExtractor()
-        spatial_transformer_last_layer = self.model.spatial_transformer.layers[-1][0].attend
-        self.handle = spatial_transformer_last_layer.register_forward_hook(self.attn_extractor.hook_fn) # type: ignore
-        spatial_transformer_last_layer.use_flash_attn = False # disable flash attention for the same layer(s) ur extracting weights from 
+        self.attn_extractor = AttentionExtractor(self.model)
         
         self.optimizer = instantiate(self.cfg.trainer.optimizer)(params=self.model.parameters())
         self.scheduler = instantiate(self.cfg.trainer.scheduler)(optimizer=self.optimizer) 

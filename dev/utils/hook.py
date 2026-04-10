@@ -1,6 +1,16 @@
 class AttentionExtractor:
-    def __init__(self):
+    def __init__(self, model):
+        # might want to regularize multiple of the last layers, maybe turn this into some kinda for loop and in my config file i can specify how many of the last layers i wana regularize and with what intensity?
+        spatial_transformer_last_layer = model.spatial_transformer.layers[-1][0].attend
+        # The handle below is just a receipt (u dont need to store it bc its only job is to let you remove the hook later if you want to, via self.handle.remove())
+        self.handle = spatial_transformer_last_layer.register_forward_hook(self.hook_fn) # type: ignore 
+        spatial_transformer_last_layer.use_flash_attn = False # disable flash attention for the same layer(s) ur extracting weights from 
+        
+
         self.cls_qkt_logits = None 
+
+    def remove(self):
+        self.handle.remove()
     
     def hook_fn(self, layer, input, output):
         # im leaving out the processing logic and keeping the hook dumb- softmaxing is part of the regularization computation, the hook is only supposed to return what it gets from the model

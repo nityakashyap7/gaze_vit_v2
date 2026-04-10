@@ -55,8 +55,27 @@ data_pipeline:
     gaze_mask_coef: 0.7
 
 
+games:
+  - Seaquest
+  - Enduro
+  - Freeway
+  - Asterix
+  - DemonAttack
+  - RoadRunner
+  - MsPacman
+  - UpNDown
+  - Amidar
+  - Breakout
+  - BankHeist
+  - Alien
+  - Hero
+  - Frostbite
+  - Assault
+  - ChopperCommand
+  - Qbert
+  - Phoenix
+
 create_env:
-  env_name: ${env_name}
   noop_max: 30
   frame_skip: 1
   obs_size: 84

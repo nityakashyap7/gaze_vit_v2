@@ -21,7 +21,7 @@
 ---
 
 # Repo structure
-`dev/` contains jupyter notebooks of experiment code, core data processing/patching and training pipeline. `images/` contains all the visuals i could put in the paper. `finalized/` will be the polished code for someone else who'd wanna reproduce my results.  
+`dev/` contains jupyter notebooks of experiment code, core data processing/patching and training pipeline. `finalized/` will be the polished code for someone else who'd wanna reproduce my results.  
 
 ## Config structure
 ```
